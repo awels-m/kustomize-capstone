@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Common labels added to EVERY object produced by this kustomization
+commonLabels:
+  app.k8s.io/name: kustomize-capstone
+  app.k8s.io/part-of: webapp
+
+# Optional: add an annotation everywhere
+commonAnnotations:
+  owner: dr-muogbo
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+# ---- Generators ----
+configMapGenerator:
+  - name: app-config
+    literals:
+      - WELCOME_MESSAGE=Hello from BASE
+      - FEATURE_FLAG_X=false
+
+secretGenerator:
+  - name: app-secret
+    literals:
+      - API_TOKEN=base-demo-token
+
+# Ensures generated names include a hash of contents (helps rollouts)
+generatorOptions:
+  disableNameSuffixHash: false
