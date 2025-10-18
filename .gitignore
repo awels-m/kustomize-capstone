@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Node/Logs (if you add any later)
+node_modules/
+npm-debug.log*
+
+# Kube
+.kube/
+*.kubeconfig
+
+# IDE/Editor junk
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Kustomize build outputs (if you ever save them)
+*.out.yaml
