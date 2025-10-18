@@ -1,0 +1,67 @@
+name: CI/CD with Kustomize + kind
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [ "dev", "staging", "prod" ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Install kustomize
+        run: |
+          curl -sSLo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_amd64.tar.gz
+          tar -xzf kustomize.tar.gz
+          sudo mv kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Install kind (local k8s-in-docker)
+        uses: helm/kind-action@v1
+
+      - name: Show cluster info (sanity check)
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Build Kustomize manifests for ${{ matrix.env }}
+        run: |
+          case "${{ matrix.env }}" in
+            dev)     K_DIR="overlays/dev" ;;
+            staging) K_DIR="overlays/staging" ;;
+            prod)    K_DIR="overlays/prod" ;;
+            *) echo "Unknown env"; exit 1 ;;
+          esac
+          kustomize build "$K_DIR" | tee "${{ matrix.env }}.manifest.yaml"
+
+      - name: Apply manifests to cluster for ${{ matrix.env }}
+        run: |
+          kubectl apply -f "${{ matrix.env }}.manifest.yaml"
+          echo "Waiting for deployment to be ready..."
+          # deployment name includes prefix; find it dynamically
+          DEPLOY=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
+          kubectl rollout status deploy/$DEPLOY --timeout=120s
+          echo "Deployed: $DEPLOY"
+
+      - name: List services and pods (${{ matrix.env }})
+        run: |
+          kubectl get all -o wide
+          kubectl get cm,secret
+
+      - name: Save manifests as workflow artifact (${{ matrix.env }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: kustomize-${{ matrix.env }}-manifests
+          path: ${{ matrix.env }}.manifest.yaml
