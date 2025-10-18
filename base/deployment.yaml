@@ -22,6 +22,21 @@ spec:
           env:
             - name: APP_ENV
               value: "base"   # overlays will override to dev/staging/prod
+            - name: WELCOME_MESSAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: WELCOME_MESSAGE
+            - name: FEATURE_FLAG_X
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FEATURE_FLAG_X
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: API_TOKEN
           readinessProbe:
             httpGet:
               path: /
